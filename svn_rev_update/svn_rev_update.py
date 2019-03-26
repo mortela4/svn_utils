@@ -1,6 +1,7 @@
 import sys
 import pysvn
 import uuid
+import argparse
 
 
 def get_svn_revision(local_path):
@@ -15,7 +16,7 @@ def get_svn_revision(local_path):
     return svn_info.revision.number
 
 
-def working_copy_in_sync(local_path):
+def working_copy_in_sync(local_path, ignore_list=None):
     mod_files = []
     non_files = []
     try:
@@ -25,7 +26,10 @@ def working_copy_in_sync(local_path):
             file_name = stat.data['path']
             file_status = stat.data['text_status']
             if str(file_status) == 'modified':
-                mod_files.append(file_name)
+                if file_name in ignore_list:
+                    print("File '%s' is set to IGNORED - skipping status check ...")
+                else:
+                    mod_files.append(file_name)
             if str(file_status) == 'unversioned':
                 non_files.append(file_name)
         #
@@ -44,21 +48,43 @@ if __name__ == "__main__":
         print("ERROR: missing argument - repository local copy path must be specified!")
         sys.exit(1)
 
-    repo_local_copy_dir = sys.argv[1]
+    parser = argparse.ArgumentParser(description="'svn_rev_update' command-line utility.\r\n \
+                                                Pre-requisites: last argument must be path to a SVN-versioned folder!")
+    # (Versioned-)Files-to-ignore argument:
+    parser.add_argument('--ignore', '-i', action="store", dest="ignore_files_list", type=str,
+                        help='List of files to ignore, separate with comma.')
+    # Output-file ('svn_changeset.h' default) argument:
+    parser.add_argument('--out', '-o', action="store", dest="out_file", type=str,
+                        help='Output SVN-info file, default svn_changeset.h')
+
+    # Parse:
+    # ======
+    # Last argument is always Path to SVN-versioned folder to check:
+    repo_local_copy_dir = sys.argv[-1]                  # TODO: check existence of folder before anything else!
     print("Scanning path: %s" % repo_local_copy_dir)
-
-    if num_args == 3:
-        svn_revision_header_file = sys.argv[2]
+    # Rest of arguments need scan & parse step:
+    cli_args = parser.parse_args(sys.argv[1:])
+    if cli_args.ignore_files_list is None:
+        print("No files to ignore ...")
     else:
+        ignore_files = cli_args.ignore_files_list.split(',')
+        print("Files to be ignored: %s as SREC-path ..." % ignore_files)
+    #
+    if cli_args.out_file is None:
         svn_revision_header_file = "svn_changeset.h"
+    else:
+        svn_revision_header_file = cli_args.out_file
+    print("SVN-info file: '%s'" % svn_revision_header_file)
 
+    # Run:
+    # ====
     svn_changeset_num = get_svn_revision(repo_local_copy_dir)
     if svn_changeset_num is None:
         sys.exit(1)
 
     print("Got SVN revision = %d" % svn_changeset_num)
 
-    is_synced, modified_files, unver_files = working_copy_in_sync(repo_local_copy_dir)
+    is_synced, modified_files, unver_files = working_copy_in_sync(repo_local_copy_dir, ignore_list=ignore_files)
     if is_synced:
         print("Working copy CLEAN.\r\nStatus in header file definition SVN_STATUS set to 'clean'")
         svn_status_def = "\"clean\""
