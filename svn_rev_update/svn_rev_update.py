@@ -63,7 +63,12 @@ if __name__ == "__main__":
     repo_local_copy_dir = sys.argv[-1]                  # TODO: check existence of folder before anything else!
     print("Scanning path: %s" % repo_local_copy_dir)
     # Rest of arguments need scan & parse step:
-    cli_args = parser.parse_args(sys.argv[1:])
+    try:
+        cli_args = parser.parse_args(sys.argv[1:])
+    except Exception as e:
+        print("Got '%s' exception - hmmm, how to suppress ...???" % e)
+        # TODO: add path-existence check here!
+
     if cli_args.ignore_files_list is None:
         print("No files to ignore ...")
     else:
