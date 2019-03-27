@@ -1,4 +1,5 @@
 import sys
+import os
 import pysvn
 import uuid
 import argparse
@@ -26,8 +27,9 @@ def working_copy_in_sync(local_path, ignore_list=None):
             file_name = stat.data['path']
             file_status = stat.data['text_status']
             if str(file_status) == 'modified':
-                if file_name in ignore_list:
-                    print("File '%s' is set to IGNORED - skipping status check ...")
+                base_file_name = os.path.basename(file_name)
+                if base_file_name in ignore_list:
+                    print("File '%s' is set to IGNORED - skipping status check ..." % base_file_name)
                 else:
                     mod_files.append(file_name)
             if str(file_status) == 'unversioned':
@@ -70,6 +72,7 @@ if __name__ == "__main__":
 
     if cli_args.ignore_files_list is None:
         print("No files to ignore ...")
+        ignore_files = list()
     else:
         ignore_files = cli_args.ignore_files_list.split(',')
         print("Files to be ignored: %s as SREC-path ..." % ignore_files)
