@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import pysvn
 import uuid
 import argparse
@@ -44,6 +45,7 @@ def working_copy_in_sync(local_path, ignore_list=None):
     return svn_status, mod_files, non_files
 
 
+# ****************************** Command-Line Argument Handling and Processing **************************
 if __name__ == "__main__":
     num_args = len(sys.argv)
     if num_args < 2:
@@ -52,6 +54,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="'svn_rev_update' command-line utility.\r\n \
                                                 Pre-requisites: last argument must be path to a SVN-versioned folder!")
+    # Timestamp flag (add timestamp string to version-info file):
+    parser.add_argument('--time', '-t', action='store_true', dest='time_stamp',
+                        help='Add (build-time) timestamp string to version-info file.')
     # (Versioned-)Files-to-ignore argument:
     parser.add_argument('--ignore', '-i', action="store", dest="ignore_files_list", type=str,
                         help='List of files to ignore, separate with comma.')
@@ -68,8 +73,12 @@ if __name__ == "__main__":
         cli_args = parser.parse_args(sys.argv[1:])
     except Exception as e:
         print("Got '%s' exception - hmmm, how to suppress ...???" % e)
-        # TODO: add path-existence check here!
 
+    if cli_args.time_stamp:
+        from datetime import datetime
+        time_now = datetime.now().replace(microsecond=0)
+        print("Adding NOW-timestamp '%s' ..." % time_now)
+    #
     if cli_args.ignore_files_list is None:
         print("No files to ignore ...")
         ignore_files = list()
@@ -87,7 +96,8 @@ if __name__ == "__main__":
         repo_local_copy_dir = "."
         print("Warning - using working directory as default path!")
     else:
-        repo_local_copy_dir = cli_args.path # TODO: check existence of folder before anything else!
+        # TODO: check existence of folder before anything else!
+        repo_local_copy_dir = cli_args.path
     print("Scanning path: %s" % repo_local_copy_dir)
 
     # Run:
@@ -127,8 +137,18 @@ if __name__ == "__main__":
     svn_changeset_def = "#define SVN_CHANGESET_NUM" + "\t" + str(svn_changeset_num) + "\n"
     svn_status_def = "#define SVN_STATUS" + "\t\t\t" + svn_status_def + "\n"
     uuid_def = "#define BUILD_UUID" + "\t\t\t" + str(int(unique_id)) + "\n"
+    if cli_args.time_stamp:
+        date_stamp, time_stamp = str(time_now).split()
+        time_stamp_def = "#define TIME_STAMP" + "\t\t\t\"" + time_stamp + "\"\n"
+        date_stamp_def = "#define DATE_STAMP" + "\t\t\t\"" + date_stamp + "\"\n"
+    else:
+        # No time or date info added ...
+        time_stamp_def = ""
+        date_stamp_def = ""
+    #
     with open(svn_revision_header_file, 'w') as changeset_file:
-        changeset_file.writelines(svn_changeset_def + svn_status_def + uuid_def)
+        changeset_file.writelines(svn_changeset_def + svn_status_def + uuid_def + date_stamp_def + time_stamp_def)
+    #
     print("--> Finished updating SVN revision header file.")
 
 
