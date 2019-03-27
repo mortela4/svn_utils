@@ -56,13 +56,12 @@ if __name__ == "__main__":
     # Output-file ('svn_changeset.h' default) argument:
     parser.add_argument('--out', '-o', action="store", dest="out_file", type=str,
                         help='Output SVN-info file, default svn_changeset.h')
+    # Path to SVN-versioned folder:
+    parser.add_argument(action="store", dest="path", type=str,
+                        help="Path to SVN-versioned project folder. Default '.'")
 
     # Parse:
     # ======
-    # Last argument is always Path to SVN-versioned folder to check:
-    repo_local_copy_dir = sys.argv[-1]                  # TODO: check existence of folder before anything else!
-    print("Scanning path: %s" % repo_local_copy_dir)
-    # Rest of arguments need scan & parse step:
     try:
         cli_args = parser.parse_args(sys.argv[1:])
     except Exception as e:
@@ -80,6 +79,13 @@ if __name__ == "__main__":
     else:
         svn_revision_header_file = cli_args.out_file
     print("SVN-info file: '%s'" % svn_revision_header_file)
+    # Last argument is always Path to SVN-versioned folder to check:
+    if cli_args.path is None:
+        repo_local_copy_dir = "."
+        print("Warning - using working directory as default path!")
+    else:
+        repo_local_copy_dir = cli_args.path # TODO: check existence of folder before anything else!
+    print("Scanning path: %s" % repo_local_copy_dir)
 
     # Run:
     # ====
