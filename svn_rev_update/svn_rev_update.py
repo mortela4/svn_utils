@@ -136,6 +136,7 @@ if __name__ == "__main__":
     print("--> Updating SVN revision header file '%s' ..." % svn_revision_header_file)
     svn_changeset_def = "#define SVN_CHANGESET_NUM" + "\t" + str(svn_changeset_num) + "\n"
     svn_status_def = "#define SVN_STATUS" + "\t\t\t" + svn_status_def + "\n"
+    svn_is_clean_def = "#define LOCAL_IS_CLEAN" + "\t\t" + str(is_synced).lower() + "\n"
     uuid_def = "#define BUILD_UUID" + "\t\t\t" + str(int(unique_id)) + "\n"
     if cli_args.time_stamp:
         date_stamp, time_stamp = str(time_now).split()
@@ -147,7 +148,12 @@ if __name__ == "__main__":
         date_stamp_def = ""
     #
     with open(svn_revision_header_file, 'w') as changeset_file:
-        changeset_file.writelines(svn_changeset_def + svn_status_def + uuid_def + date_stamp_def + time_stamp_def)
+        changeset_file.writelines(svn_changeset_def +
+                                  svn_status_def +
+                                  svn_is_clean_def +
+                                  uuid_def +
+                                  date_stamp_def +
+                                  time_stamp_def)
     #
     print("--> Finished updating SVN revision header file.")
 
