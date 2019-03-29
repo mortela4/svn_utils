@@ -1,6 +1,5 @@
 import sys
 import os
-import time
 import pysvn
 import uuid
 import argparse
@@ -9,18 +8,20 @@ import argparse
 def get_svn_revision(local_path):
     try:
         cli = pysvn.Client(local_path)
-        svn_info = cli.info(local_path)
+        svn_info = cli.info2(local_path, recurse=True)
+        rev_info = svn_info[0][1]['rev']
     except Exception as exc:
         print("PySvn exception: %s" % repr(exc))
         print("No valid repository found at PATH = '%s' ?" % local_path)
         return None
 
-    return svn_info.revision.number
+    return rev_info.number
 
 
 def working_copy_in_sync(local_path, ignore_list=None):
-    mod_files = []
-    non_files = []
+    mod_files = list()
+    non_files = list()
+    highest_rev_found = 0
     try:
         cli = pysvn.Client(local_path)
         svn_statuses = cli.status(local_path, ignore=True, recurse=True)
@@ -35,6 +36,10 @@ def working_copy_in_sync(local_path, ignore_list=None):
                     mod_files.append(file_name)
             if str(file_status) == 'unversioned':
                 non_files.append(file_name)
+            else:
+                file_rev_no = get_svn_revision(file_name)
+                if file_rev_no > highest_rev_found:
+                    highest_rev_found = file_rev_no
         #
         svn_status = (len(mod_files) == 0)
     except Exception as exc:
@@ -42,7 +47,7 @@ def working_copy_in_sync(local_path, ignore_list=None):
         print("No valid repository found at PATH = '%s' ?" % local_path)
         return None
 
-    return svn_status, mod_files, non_files
+    return svn_status, mod_files, non_files, highest_rev_found
 
 
 # ****************************** Command-Line Argument Handling and Processing **************************
@@ -108,7 +113,14 @@ if __name__ == "__main__":
 
     print("Got SVN revision = %d" % svn_changeset_num)
 
-    is_synced, modified_files, unver_files = working_copy_in_sync(repo_local_copy_dir, ignore_list=ignore_files)
+    is_synced, modified_files, unver_files, highest_rev_no = working_copy_in_sync(repo_local_copy_dir, ignore_list=ignore_files)
+    if svn_changeset_num < highest_rev_no:
+        print("WARNING: some files in project has been SELECTIVELY updated! This may be DANGEROUS!!!")
+        print("+++++++++ Please update project from top-level!! +++++++++++")
+        top_level_updated = False   # May use this to ABORT build f.ex.
+    else:
+        print("UPDATE-status: Project is correctly updated from top-level recursively down ...")
+        top_level_updated = True
     if is_synced:
         print("Working copy CLEAN.\r\nStatus in header file definition SVN_STATUS set to 'clean'")
         svn_status_def = "\"clean\""
@@ -134,14 +146,15 @@ if __name__ == "__main__":
 
     # Update header file:
     print("--> Updating SVN revision header file '%s' ..." % svn_revision_header_file)
-    svn_changeset_def = "#define SVN_CHANGESET_NUM" + "\t" + str(svn_changeset_num) + "\n"
-    svn_status_def = "#define SVN_STATUS" + "\t\t\t" + svn_status_def + "\n"
-    svn_is_clean_def = "#define LOCAL_IS_CLEAN" + "\t\t" + str(is_synced).lower() + "\n"
-    uuid_def = "#define BUILD_UUID" + "\t\t\t" + str(int(unique_id)) + "\n"
+    svn_changeset_def = "#define SVN_CHANGESET_NUM" + "\t\t" + str(svn_changeset_num) + "\n"
+    svn_status_def = "#define SVN_STATUS" + "\t\t\t\t" + svn_status_def + "\n"
+    svn_is_clean_def = "#define LOCAL_IS_CLEAN" + "\t\t\t" + str(is_synced).lower() + "\n"
+    svn_is_top_level_updated_def = "#define IS_TOP_LEVEL_UPDATED" + "\t" + str(top_level_updated).lower() + "\n"
+    uuid_def = "#define BUILD_UUID" + "\t\t\t\t" + str(int(unique_id)) + "\n"
     if cli_args.time_stamp:
         date_stamp, time_stamp = str(time_now).split()
-        time_stamp_def = "#define TIME_STAMP" + "\t\t\t\"" + time_stamp + "\"\n"
-        date_stamp_def = "#define DATE_STAMP" + "\t\t\t\"" + date_stamp + "\"\n"
+        time_stamp_def = "#define TIME_STAMP" + "\t\t\t\t\"" + time_stamp + "\"\n"
+        date_stamp_def = "#define DATE_STAMP" + "\t\t\t\t\"" + date_stamp + "\"\n"
     else:
         # No time or date info added ...
         time_stamp_def = ""
@@ -151,6 +164,7 @@ if __name__ == "__main__":
         changeset_file.writelines(svn_changeset_def +
                                   svn_status_def +
                                   svn_is_clean_def +
+                                  svn_is_top_level_updated_def +
                                   uuid_def +
                                   date_stamp_def +
                                   time_stamp_def)
