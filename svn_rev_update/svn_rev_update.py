@@ -5,13 +5,13 @@ import uuid
 import argparse
 
 
-APP_VER = [1, 0, 0]     # Version 1.0.0
+APP_VER = [1, 0, 1]     # Version 1.0.1 --> do not use 'local_path' (to local copy) as SVN-config dir!
 VER_STR = str("%s.%s.%s" % (APP_VER[0], APP_VER[1], APP_VER[2]))
 
 
-def get_svn_revision(local_path):
+def get_svn_revision(cli, local_path):
     try:
-        cli = pysvn.Client(local_path)
+        # cli = pysvn.Client(local_path)
         svn_info = cli.info2(local_path, recurse=True)
         rev_info = svn_info[0][1]['rev']
     except Exception as exc:
@@ -22,12 +22,12 @@ def get_svn_revision(local_path):
     return rev_info.number
 
 
-def working_copy_in_sync(local_path, ignore_list=None):
+def working_copy_in_sync(cli, local_path, ignore_list=None):
     mod_files = list()
     non_files = list()
     highest_rev_found = 0
     try:
-        cli = pysvn.Client(local_path)
+        # cli = pysvn.Client(local_path)
         svn_statuses = cli.status(local_path, ignore=True, recurse=True)
         for stat in svn_statuses:
             file_name = stat.data['path']
@@ -41,7 +41,7 @@ def working_copy_in_sync(local_path, ignore_list=None):
             if str(file_status) == 'unversioned':
                 non_files.append(file_name)
             else:
-                file_rev_no = get_svn_revision(file_name)
+                file_rev_no = get_svn_revision(cli=cli, local_path=file_name)
                 if file_rev_no > highest_rev_found:
                     highest_rev_found = file_rev_no
         #
@@ -113,13 +113,19 @@ if __name__ == "__main__":
 
     # Run:
     # ====
-    svn_changeset_num = get_svn_revision(repo_local_copy_dir)
+    # Create SVN-client instance - do NOT specify a local-PATH as argument
+    # (as this will create "auth"/"server"/"config"/"readme.txt" files in that folder)
+    svn_client = pysvn.Client()
+
+    svn_changeset_num = get_svn_revision(cli=svn_client, local_path=repo_local_copy_dir)
     if svn_changeset_num is None:
         sys.exit(1)
 
     print("Got SVN revision = %d" % svn_changeset_num)
 
-    is_synced, modified_files, unver_files, highest_rev_no = working_copy_in_sync(repo_local_copy_dir, ignore_list=ignore_files)
+    is_synced, modified_files, unver_files, highest_rev_no = \
+        working_copy_in_sync(cli=svn_client, local_path=repo_local_copy_dir, ignore_list=ignore_files)
+
     if svn_changeset_num < highest_rev_no:
         print("WARNING: some files in project has been SELECTIVELY updated! This may be DANGEROUS!!!")
         print("+++++++++ Please update project from top-level!! +++++++++++")
