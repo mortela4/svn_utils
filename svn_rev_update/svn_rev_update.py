@@ -5,9 +5,36 @@ import uuid
 import argparse
 
 
-APP_VER = [1, 0, 1]     # Version 1.0.1 --> do not use 'local_path' (to local copy) as SVN-config dir!
+APP_VER = [1, 0, 2]     # Version 1.0.2 : added "-s <folder1,folder2,...,folderN>" flag to skip status check of folders.
 VER_STR = str("%s.%s.%s" % (APP_VER[0], APP_VER[1], APP_VER[2]))
 
+
+# **************** HELPERS **************************
+
+def ignore_or_skip(file_path, local_path, ignore_list=None, skip=None, debug=False):
+    # First, check files to be ignored:
+    if ignore_list is not None and len(ignore_list)>0:
+        base_file_name = os.path.basename(file_path)
+        if base_file_name in ignore_list:
+            if debug:
+                print("File '%s' is set to IGNORED - skipping status check ..." % base_file_name)
+            return True
+    # Second, check folders to be skipped:
+    if skip is not None and len(skip) > 0:
+        for skip_folder in skip:
+            full_skip_path = os.path.join(local_path, skip_folder)
+            if debug:
+                print("Checking path='%s' against skip-path='%s' ..." % (file_path, full_skip_path))
+            if file_path.startswith(full_skip_path):
+                if debug:
+                    print("Folder '%s' is set to SKIP - skipping status check for file %s beneath this folder ..." %
+                          (skip_folder, file_path))
+                return True
+        # Default:
+        return False
+
+
+# **************** SVN functions *********************************
 
 def get_svn_revision(cli, local_path):
     try:
@@ -22,20 +49,21 @@ def get_svn_revision(cli, local_path):
     return rev_info.number
 
 
-def working_copy_in_sync(cli, local_path, ignore_list=None):
+def working_copy_in_sync(cli, local_path, ignore_list=None, skip=None, debug=False):
     mod_files = list()
     non_files = list()
     highest_rev_found = 0
     try:
         # cli = pysvn.Client(local_path)
-        svn_statuses = cli.status(local_path, ignore=True, recurse=True)
+        svn_statuses = cli.status(local_path, ignore=True, recurse=True, )
         for stat in svn_statuses:
             file_name = stat.data['path']
+            if debug:
+                print("INFO: checking file = %s" % file_name)
             file_status = stat.data['text_status']
             if str(file_status) == 'modified':
-                base_file_name = os.path.basename(file_name)
-                if base_file_name in ignore_list:
-                    print("File '%s' is set to IGNORED - skipping status check ..." % base_file_name)
+                if ignore_or_skip(file_path=file_name, local_path=local_path, ignore_list=ignore_list, skip=skip):
+                    print("Skipping status check for '%s' ..." % file_name)
                 else:
                     mod_files.append(file_name)
             if str(file_status) == 'unversioned':
@@ -71,6 +99,9 @@ if __name__ == "__main__":
     # (Versioned-)Files-to-ignore argument:
     parser.add_argument('--ignore', '-i', action="store", dest="ignore_files_list", type=str,
                         help='List of files to ignore, separate with comma.')
+    # (Versioned-)Paths-to-ignore argument:
+    parser.add_argument('--skip', '-s', action="store", dest="skip_paths_list", type=str,
+                        help='List of paths to skip, separate with comma.')
     # Output-file ('svn_changeset.h' default) argument:
     parser.add_argument('--out', '-o', action="store", dest="out_file", type=str,
                         help='Output SVN-info file, default svn_changeset.h')
@@ -95,7 +126,14 @@ if __name__ == "__main__":
         ignore_files = list()
     else:
         ignore_files = cli_args.ignore_files_list.split(',')
-        print("Files to be ignored: %s as SREC-path ..." % ignore_files)
+        print("Files to be ignored: %s" % ignore_files)
+    #
+    if cli_args.skip_paths_list is None:
+        print("No paths to skip ...")
+        skip_paths = list()
+    else:
+        skip_paths = cli_args.skip_paths_list.split(',')
+        print("Paths (under local copy) to be skipped: %s" % skip_paths)
     #
     if cli_args.out_file is None:
         svn_revision_header_file = "svn_changeset.h"
@@ -124,7 +162,7 @@ if __name__ == "__main__":
     print("Got SVN revision = %d" % svn_changeset_num)
 
     is_synced, modified_files, unver_files, highest_rev_no = \
-        working_copy_in_sync(cli=svn_client, local_path=repo_local_copy_dir, ignore_list=ignore_files)
+        working_copy_in_sync(cli=svn_client, local_path=repo_local_copy_dir, ignore_list=ignore_files, skip=skip_paths)
 
     if svn_changeset_num < highest_rev_no:
         print("WARNING: some files in project has been SELECTIVELY updated! This may be DANGEROUS!!!")
