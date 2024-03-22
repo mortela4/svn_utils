@@ -4,8 +4,14 @@ import pysvn
 import uuid
 import argparse
 
+from pathlib import Path   # To adjust file-paths to OS-specific format (i.e. 'unification')
 
-APP_VER = [1, 0, 2]     # Version 1.0.2 : added "-s <folder1,folder2,...,folderN>" flag to skip status check of folders.
+
+VER_MAJOR = 1           # I.e. first 'production' variant.
+VER_MINOR = 0
+VER_SUBMINOR = 3        # Fix: "-s" option skip-folders have their PATH normalized per OS-type, before checking (i.e. mix of '/' and '\' slashes is OK).
+
+APP_VER = [VER_MAJOR, VER_MINOR, VER_SUBMINOR]     
 VER_STR = str("%s.%s.%s" % (APP_VER[0], APP_VER[1], APP_VER[2]))
 
 
@@ -23,12 +29,16 @@ def ignore_or_skip(file_path, local_path, ignore_list=None, skip=None, debug=Fal
     if skip is not None and len(skip) > 0:
         for skip_folder in skip:
             full_skip_path = os.path.join(local_path, skip_folder)
+            # NOTE: adjustment of file-paths necessary!! (may contain mix of '/' and '\' slahes!)
+            os_generic_skip_path = str( Path(full_skip_path) )
+            os_generic_file_path = str( Path(file_path) )
+            # NOW we can compare ...
             if debug:
-                print("Checking path='%s' against skip-path='%s' ..." % (file_path, full_skip_path))
-            if file_path.startswith(full_skip_path):
+                print("Checking path='%s' against skip-path='%s' ..." % (os_generic_file_path, os_generic_skip_path))
+            if os_generic_file_path.startswith(os_generic_skip_path):
                 if debug:
                     print("Folder '%s' is set to SKIP - skipping status check for file %s beneath this folder ..." %
-                          (skip_folder, file_path))
+                          (os_generic_skip_path, os_generic_file_path))
                 return True
         # Default:
         return False
@@ -74,8 +84,11 @@ def working_copy_in_sync(cli, local_path, ignore_list=None, skip=None, debug=Fal
                     highest_rev_found = file_rev_no
         #
         svn_status = (len(mod_files) == 0)
+    except AttributeError as exc:
+        print("File-PATH check failed: %s" % repr(exc))
+        return None
     except Exception as exc:
-        print("PySvn exception: %s" % repr(exc))
+        print("Possible 'PySvn' exception: %s" % repr(exc))
         print("No valid repository found at PATH = '%s' ?" % local_path)
         return None
 
@@ -171,6 +184,7 @@ if __name__ == "__main__":
     else:
         print("UPDATE-status: Project is correctly updated from top-level recursively down ...")
         top_level_updated = True
+        
     if is_synced:
         print("Working copy CLEAN.\r\nStatus in header file definition SVN_STATUS set to 'clean'")
         svn_status_def = "\"clean\""
