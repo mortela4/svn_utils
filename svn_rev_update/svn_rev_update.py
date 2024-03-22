@@ -114,13 +114,13 @@ if __name__ == "__main__":
                         help='List of files to ignore, separate with comma.')
     # (Versioned-)Paths-to-ignore argument:
     parser.add_argument('--skip', '-s', action="store", dest="skip_paths_list", type=str,
-                        help='List of paths to skip, separate with comma.')
+                        help='List of paths to skip, separate with comma. Path must be RELATIVE to local copy base dir!(=last argument)')
     # Output-file ('svn_changeset.h' default) argument:
     parser.add_argument('--out', '-o', action="store", dest="out_file", type=str,
                         help='Output SVN-info file, default svn_changeset.h')
     # Path to SVN-versioned folder:
     parser.add_argument(action="store", dest="path", type=str,
-                        help="Path to SVN-versioned project folder. Default '.'")
+                        help="Path to SVN-versioned project folder (i.e. local copy base dir). Default '.'")
 
     # Parse:
     # ======
