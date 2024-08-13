@@ -10,8 +10,8 @@ from pathlib import Path   # To adjust file-paths to OS-specific format (i.e. 'u
 
 
 VER_MAJOR = 1           # I.e. first 'production' variant.
-VER_MINOR = 1           # Added '-c' option for Csharp output (as class .cs-file)
-VER_SUBMINOR = 0        
+VER_MINOR = 2           # UUID represented as string for CSharp - as 128-bit INTs are >= .NET7 feature. 
+VER_SUBMINOR = 1        # Bugfix: time/data shall be "<none>" not <none>.  
 
 APP_VER = [VER_MAJOR, VER_MINOR, VER_SUBMINOR]     
 VER_STR = str("%s.%s.%s" % (APP_VER[0], APP_VER[1], APP_VER[2]))
@@ -30,9 +30,9 @@ namespace VersionInfo
 		public const String SVN_STATUS = $svn_status_def;
 		public const bool LOCAL_IS_CLEAN = $local_is_clean;
 		public const bool IS_TOP_LEVEL_UPDATED = $updated_from_toplevel;
-		public const Int128 BUILD_UUID = $build_uuid;
-        public const String TIME_STAMP = $build_time;
-        public const String DATE_STAMP = $build_date;
+		public const String BUILD_UUID = "$build_uuid";
+        public const String TIME_STAMP = "$build_time";
+        public const String DATE_STAMP = "$build_date";
 	}
 }
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
 		                                            svn_status_def = svn_status_def,
                                                     local_is_clean = str(is_synced).lower(),
                                                     updated_from_toplevel = str(top_level_updated).lower(),
-                                                    build_uuid = str(int(unique_id)),
+                                                    build_uuid = str(unique_id),
                                                     build_time = time_stamp,
                                                     build_date = date_stamp,
                                                     ) 
