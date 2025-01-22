@@ -12,13 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout
+    - uses: actions/checkout@latest
     - name: PyInstaller Windows
-      uses: JackMcKew/pyinstaller-action-windows
+      uses: JackMcKew/pyinstaller-action-windows@latest
       with:
         path: svn_rev_update
 
-    - uses: actions/upload-artifact
+    - uses: actions/upload-artifact@latest
       with:
         name: svn_rev_update.exe
         path: svn_rev_update/bin   # or path/to/artifact
