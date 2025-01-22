@@ -10,8 +10,8 @@ from pathlib import Path   # To adjust file-paths to OS-specific format (i.e. 'u
 
 
 VER_MAJOR = 1           # I.e. first 'production' variant.
-VER_MINOR = 2           # UUID represented as string for CSharp - as 128-bit INTs are >= .NET7 feature. 
-VER_SUBMINOR = 1        # Bugfix: time/data shall be "<none>" not <none>.  
+VER_MINOR = 3           # Added option (CLI-arg) for prefix for defines. 
+VER_SUBMINOR = 0        #  
 
 APP_VER = [VER_MAJOR, VER_MINOR, VER_SUBMINOR]     
 VER_STR = str("%s.%s.%s" % (APP_VER[0], APP_VER[1], APP_VER[2]))
@@ -142,6 +142,9 @@ if __name__ == "__main__":
     # Output-file ('svn_changeset.h' default) argument:
     parser.add_argument('--out', '-o', action="store", dest="out_file", type=str,
                         help='Output SVN-info file, default svn_changeset.h')
+    # Define prefix for output file (for support of project based on sub-projects, i.e. 'non-monolithic'):
+    parser.add_argument('--prefix', '-p', action="store", dest="prefix_arg", type=str,
+                        help='Prefix for output defines, default none. Example: \"APPLICATION_\"')
     # Path to SVN-versioned folder:
     parser.add_argument(action="store", dest="path", type=str,
                         help="Path to SVN-versioned project folder (i.e. local copy base dir). Default '.'")
@@ -187,6 +190,14 @@ if __name__ == "__main__":
             svn_revision_header_file = "svn_changeset.h"
     else:
         svn_revision_header_file = cli_args.out_file
+    #
+    if cli_args.prefix_arg is None:
+        prefix_str = ""
+        print("No prefix for output defines ...")
+    else:
+        prefix_str = cli_args.prefix_arg
+        print("Prefix for output defines: %s" % prefix_str)
+    #
     print("SVN-info file: '%s'" % svn_revision_header_file)
     # Last argument is always Path to SVN-versioned folder to check:
     if cli_args.path is None:
@@ -272,15 +283,15 @@ if __name__ == "__main__":
     else:
         # C/C++ format header file (=default).
         print("--> Updating SVN revision header file '%s' ..." % svn_revision_header_file)
-        svn_changeset_def = "#define SVN_CHANGESET_NUM" + "\t\t" + str(svn_changeset_num) + "\n"
-        svn_status_def = "#define SVN_STATUS" + "\t\t\t\t" + svn_status_def + "\n"
-        svn_is_clean_def = "#define LOCAL_IS_CLEAN" + "\t\t\t" + str(is_synced).lower() + "\n"
-        svn_is_top_level_updated_def = "#define IS_TOP_LEVEL_UPDATED" + "\t" + str(top_level_updated).lower() + "\n"
-        uuid_def = "#define BUILD_UUID" + "\t\t\t\t" + str(int(unique_id)) + "\n"
+        svn_changeset_def = "#define " + prefix_str + "SVN_CHANGESET_NUM" + "\t\t" + str(svn_changeset_num) + "\n"
+        svn_status_def = "#define " + prefix_str + "SVN_STATUS" + "\t\t\t\t" + svn_status_def + "\n"
+        svn_is_clean_def = "#define " + prefix_str + "LOCAL_IS_CLEAN" + "\t\t\t" + str(is_synced).lower() + "\n"
+        svn_is_top_level_updated_def = "#define " + prefix_str + "IS_TOP_LEVEL_UPDATED" + "\t" + str(top_level_updated).lower() + "\n"
+        uuid_def = "#define " + prefix_str + "BUILD_UUID" + "\t\t\t\t" + str(int(unique_id)) + "\n"
         if cli_args.time_stamp:
             date_stamp, time_stamp = str(time_now).split()
-            time_stamp_def = "#define TIME_STAMP" + "\t\t\t\t\"" + time_stamp + "\"\n"
-            date_stamp_def = "#define DATE_STAMP" + "\t\t\t\t\"" + date_stamp + "\"\n"
+            time_stamp_def = "#define " + prefix_str + "TIME_STAMP" + "\t\t\t\t\"" + time_stamp + "\"\n"
+            date_stamp_def = "#define " + prefix_str + "DATE_STAMP" + "\t\t\t\t\"" + date_stamp + "\"\n"
         else:
             # No time or date info added ...
             time_stamp_def = ""
