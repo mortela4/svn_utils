@@ -23,29 +23,5 @@ jobs:
           python -m PyInstaller svn_rev_update.spec
       - uses: actions/upload-artifact@v4
         with:
-          name: Windows_qwiklabs
-          path: dist/qwiklab_badge_checker.exe
-
-      - name: create release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.event.head_commit.message }}
-          release_name: ${{ github.event.head_commit.message }}
-          overwrite: true
-          body: |
-            Test Release v1.0.0
-          draft: false
-          prerelease: false
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{steps.create_release.outputs.upload_url}}
-          asset_path: dist/svn_rev_update
-          asset_name: svn_rev_update-Windows-amd64.exe
-          asset_content_type: application/zip
+          name: SVN_rev_update_EXE
+          path: dist/svn_rev_update.exe
