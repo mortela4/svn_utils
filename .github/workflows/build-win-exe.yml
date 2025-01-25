@@ -20,8 +20,10 @@ jobs:
           pip install -r requirements.txt
       - name: download and install PySVN
         run: |
-          curl.exe -o %TMP%\pysvn_installer.exe "https://sourceforge.net/projects/pysvn/files/pysvn/V1.9.23/Windows/py313-pysvn-svn1144-1.9.23-2129-Win64.exe/download"
-          %TMP%\pysvn_installer.exe
+          curl.exe -o .\pysvn_installer.exe "https://sourceforge.net/projects/pysvn/files/pysvn/V1.9.23/Windows/py313-pysvn-svn1144-1.9.23-2129-Win64.exe/download"
+      - name: install PySVN
+        run:
+          .\pysvn_installer.exe
       - name: Run PyInstaller
         run: |
           python -m PyInstaller svn_rev_update.spec
